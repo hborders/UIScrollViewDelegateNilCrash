@@ -19,6 +19,7 @@
  *
  */
 
+#define NORMAL_USAGE 1
 #define WORKAROUND 0
 
 @interface ScrollViewDelegate : NSObject<UIScrollViewDelegate>
@@ -85,7 +86,7 @@
 
 - (void) loadView {
 #if __has_feature(objc_arc)
-    self.view = [UIScrollView new];
+    self.view = ((HBAppDelegate *)[UIApplication sharedApplication].delegate).scrollView;
     self.scrollView.contentSize = CGSizeMake(2000, 4000);
 
     self.scrollViewDelegate = [[ScrollViewDelegate alloc] initWithScrollView:self.scrollView];
@@ -94,7 +95,7 @@
     pushBackLabel.text = @"Push Back";
     [self.scrollView addSubview:pushBackLabel];
 #else
-    self.view = [[UIScrollView new] autorelease];
+    self.view = ((HBAppDelegate *)[UIApplication sharedApplication].delegate).scrollView;
     self.scrollView.contentSize = CGSizeMake(2000, 4000);
 
     self.scrollViewDelegate = [[[ScrollViewDelegate alloc] initWithScrollView:self.scrollView] autorelease];
@@ -113,6 +114,10 @@
 }
 
 - (void) viewWillDisappear:(BOOL)animated {
+#if NORMAL_USAGE
+    [self.scrollView setContentOffset:CGPointZero
+                             animated:YES];
+#else
 #if __has_feature(objc_arc)
     __weak ScrollViewController *weakSelf = self;
     self.setContentOffsetBlock = ^{
@@ -139,6 +144,7 @@
     };
 
     self.setContentOffsetBlock();
+#endif
 #endif
 
     [super viewWillDisappear:animated];
@@ -212,12 +218,16 @@
     self.window = [[UIWindow alloc] initWithFrame:[[UIScreen mainScreen] bounds]];
     self.window.backgroundColor = [UIColor whiteColor];
 
+    self.scrollView = [UIScrollView new];
+
     PushScrollViewController *pushScrollViewController = [PushScrollViewController new];
     self.window.rootViewController = [[UINavigationController alloc] initWithRootViewController:pushScrollViewController];
 #else
     NSLog(@"Using Manual Reference Counting");
     self.window = [[[UIWindow alloc] initWithFrame:[[UIScreen mainScreen] bounds]] autorelease];
     self.window.backgroundColor = [UIColor whiteColor];
+
+    self.scrollView = [[UIScrollView new] autorelease];
 
     PushScrollViewController *pushScrollViewController = [[PushScrollViewController new] autorelease];
     self.window.rootViewController = [[[UINavigationController alloc] initWithRootViewController:pushScrollViewController] autorelease];
