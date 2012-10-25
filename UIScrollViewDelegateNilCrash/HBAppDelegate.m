@@ -208,7 +208,12 @@
     int64_t delayInSeconds = 2.0;
     dispatch_time_t popTime = dispatch_time(DISPATCH_TIME_NOW, delayInSeconds * NSEC_PER_SEC);
     dispatch_after(popTime, dispatch_get_main_queue(), ^(void){
-        NSLog(@"ScrollView.delegate=%p", ((HBAppDelegate *)[UIApplication sharedApplication].delegate).scrollView.delegate);
+#if __has_feature(objc_arc)
+        __unsafe_unretained id<UIScrollViewDelegate> scrollViewDelegate = [((HBAppDelegate *)[UIApplication sharedApplication].delegate).scrollView performSelector:@selector(delegate)];
+#else
+        id<UIScrollViewDelegate> scrollViewDelegate = ((HBAppDelegate *)[UIApplication sharedApplication].delegate).scrollView.delegate;
+#endif
+        NSLog(@"ScrollView.delegate=%p", scrollViewDelegate);
     });
 }
 
