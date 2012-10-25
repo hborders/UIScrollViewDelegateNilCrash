@@ -8,42 +8,160 @@
 
 #import "HBAppDelegate.h"
 
+/*
+ *
+ *
+ *
+ * Switch to
+ * WORKAROUND 1
+ * to demonstrate the workaround
+ *
+ *
+ */
+
+#define WORKAROUND 0
+
+@interface ScrollViewDelegate : NSObject<UIScrollViewDelegate>
+
+@property (nonatomic, strong) UIScrollView *scrollView;
+
+- (id) initWithScrollView:(UIScrollView *)scrollView;
+
+@end
+
+@implementation ScrollViewDelegate
+
+- (id) initWithScrollView:(UIScrollView *)scrollView {
+    self = [super init];
+    if (self) {
+        self.scrollView = scrollView;
+        self.scrollView.delegate = self;
+    }
+
+    return self;
+}
+
+- (void) dealloc {
+#if WORKAROUND
+    self.scrollView.delegate = nil;
+#endif
+    
+    NSLog(@"%@ dealloced", self);
+}
+
+@end
+
+@interface ScrollViewController : UIViewController<UIScrollViewDelegate>
+
+@property (nonatomic, readonly) UIScrollView *scrollView;
+@property (nonatomic, strong) ScrollViewDelegate *scrollViewDelegate;
+@property (nonatomic) BOOL disappeared;
+@property (nonatomic, copy) void (^setContentOffsetBlock)(void);
+
+@end
+
+@implementation ScrollViewController
+
+- (void) dealloc {
+    NSLog(@"%@ dealloced", self);
+}
+
+- (void) loadView {
+    self.view = [UIScrollView new];
+    self.scrollView.contentSize = CGSizeMake(2000, 4000);
+
+    self.scrollViewDelegate = [[ScrollViewDelegate alloc] initWithScrollView:self.scrollView];
+
+    UILabel *pushBackLabel = [[UILabel alloc] initWithFrame:CGRectMake(200, 1000, 200, 200)];
+    pushBackLabel.text = @"Push Back";
+    [self.scrollView addSubview:pushBackLabel];
+}
+
+- (void) viewDidAppear:(BOOL)animated {
+    [self.scrollView setContentOffset:CGPointMake(0, 1000)
+                             animated:YES];
+
+    [super viewDidAppear:animated];
+}
+
+- (void) viewWillDisappear:(BOOL)animated {
+    __weak ScrollViewController *weakSelf = self;
+    self.setContentOffsetBlock = ^{
+        if (weakSelf && !weakSelf.disappeared) {
+            [weakSelf.scrollView setContentOffset:CGPointZero
+                                         animated:YES];
+            dispatch_async(dispatch_get_main_queue(),
+                           weakSelf.setContentOffsetBlock);
+        }
+    };
+    self.setContentOffsetBlock();
+
+    [super viewWillDisappear:animated];
+}
+
+- (void) viewDidDisappear:(BOOL)animated {
+    self.disappeared = YES;
+    
+    [super viewDidDisappear:animated];
+}
+
+- (UIScrollView *) scrollView {
+    return (UIScrollView *) self.view;
+}
+
+@end
+
+@interface PushScrollViewController : UIViewController
+
+@property (nonatomic, unsafe_unretained) ScrollViewController *scrollViewController;
+
+@end
+
+@implementation PushScrollViewController
+
+- (void) loadView {
+    UIButton *pushScrollViewControllerButton = [UIButton buttonWithType:UIButtonTypeRoundedRect];
+    [pushScrollViewControllerButton addTarget:nil
+                                       action:@selector(pushScrollViewControllerButtonTouchUpInside)
+                             forControlEvents:UIControlEventTouchUpInside];
+    [pushScrollViewControllerButton setTitle:@"Push"
+                                    forState:UIControlStateNormal];
+
+    self.view = pushScrollViewControllerButton;
+}
+
+- (void) viewWillAppear:(BOOL)animated {
+    [super viewWillAppear:animated];
+
+    [self.scrollViewController.scrollView setContentOffset:CGPointMake(0,
+                                                                       1000)
+                                                  animated:YES];
+}
+
+- (void) pushScrollViewControllerButtonTouchUpInside {
+    ScrollViewController *scrollViewController = [ScrollViewController new];
+    self.scrollViewController = scrollViewController;
+    [self.navigationController pushViewController:scrollViewController
+                                         animated:YES];
+}
+
+@end
+
+@interface HBAppDelegate()
+
+@end
+
 @implementation HBAppDelegate
 
-- (BOOL)application:(UIApplication *)application didFinishLaunchingWithOptions:(NSDictionary *)launchOptions
-{
+- (BOOL)application:(UIApplication *)application didFinishLaunchingWithOptions:(NSDictionary *)launchOptions {
     self.window = [[UIWindow alloc] initWithFrame:[[UIScreen mainScreen] bounds]];
-    // Override point for customization after application launch.
     self.window.backgroundColor = [UIColor whiteColor];
+
+    PushScrollViewController *pushScrollViewController = [PushScrollViewController new];
+    self.window.rootViewController = [[UINavigationController alloc] initWithRootViewController:pushScrollViewController];
+
     [self.window makeKeyAndVisible];
     return YES;
-}
-
-- (void)applicationWillResignActive:(UIApplication *)application
-{
-    // Sent when the application is about to move from active to inactive state. This can occur for certain types of temporary interruptions (such as an incoming phone call or SMS message) or when the user quits the application and it begins the transition to the background state.
-    // Use this method to pause ongoing tasks, disable timers, and throttle down OpenGL ES frame rates. Games should use this method to pause the game.
-}
-
-- (void)applicationDidEnterBackground:(UIApplication *)application
-{
-    // Use this method to release shared resources, save user data, invalidate timers, and store enough application state information to restore your application to its current state in case it is terminated later. 
-    // If your application supports background execution, this method is called instead of applicationWillTerminate: when the user quits.
-}
-
-- (void)applicationWillEnterForeground:(UIApplication *)application
-{
-    // Called as part of the transition from the background to the inactive state; here you can undo many of the changes made on entering the background.
-}
-
-- (void)applicationDidBecomeActive:(UIApplication *)application
-{
-    // Restart any tasks that were paused (or not yet started) while the application was inactive. If the application was previously in the background, optionally refresh the user interface.
-}
-
-- (void)applicationWillTerminate:(UIApplication *)application
-{
-    // Called when the application is about to terminate. Save data if appropriate. See also applicationDidEnterBackground:.
 }
 
 @end
