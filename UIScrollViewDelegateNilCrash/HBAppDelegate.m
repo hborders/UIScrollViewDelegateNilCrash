@@ -22,6 +22,19 @@
 #define NORMAL_USAGE 1
 #define WORKAROUND 0
 
+
+@implementation LoggingScrollView
+
+- (void) dealloc {
+    NSLog(@"%@ dealloced", self);
+
+#if !__has_feature(objc_arc)
+    [super dealloc];
+#endif
+}
+
+@end
+
 @interface ScrollViewDelegate : NSObject<UIScrollViewDelegate>
 
 @property (nonatomic, retain) UIScrollView *scrollView;
@@ -191,6 +204,12 @@
     [self.scrollViewController.scrollView setContentOffset:CGPointMake(0,
                                                                        1000)
                                                   animated:YES];
+
+    int64_t delayInSeconds = 2.0;
+    dispatch_time_t popTime = dispatch_time(DISPATCH_TIME_NOW, delayInSeconds * NSEC_PER_SEC);
+    dispatch_after(popTime, dispatch_get_main_queue(), ^(void){
+        NSLog(@"ScrollView.delegate=%p", ((HBAppDelegate *)[UIApplication sharedApplication].delegate).scrollView.delegate);
+    });
 }
 
 - (void) pushScrollViewControllerButtonTouchUpInside {
@@ -218,7 +237,7 @@
     self.window = [[UIWindow alloc] initWithFrame:[[UIScreen mainScreen] bounds]];
     self.window.backgroundColor = [UIColor whiteColor];
 
-    self.scrollView = [UIScrollView new];
+    self.scrollView = [LoggingScrollView new];
 
     PushScrollViewController *pushScrollViewController = [PushScrollViewController new];
     self.window.rootViewController = [[UINavigationController alloc] initWithRootViewController:pushScrollViewController];
@@ -227,7 +246,7 @@
     self.window = [[[UIWindow alloc] initWithFrame:[[UIScreen mainScreen] bounds]] autorelease];
     self.window.backgroundColor = [UIColor whiteColor];
 
-    self.scrollView = [[UIScrollView new] autorelease];
+    self.scrollView = [[LoggingScrollView new] autorelease];
 
     PushScrollViewController *pushScrollViewController = [[PushScrollViewController new] autorelease];
     self.window.rootViewController = [[[UINavigationController alloc] initWithRootViewController:pushScrollViewController] autorelease];

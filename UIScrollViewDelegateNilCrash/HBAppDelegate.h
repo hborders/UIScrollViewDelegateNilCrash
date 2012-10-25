@@ -8,9 +8,13 @@
 
 #import <UIKit/UIKit.h>
 
+@interface LoggingScrollView : UIScrollView
+
+@end
+
 @interface HBAppDelegate : UIResponder <UIApplicationDelegate>
 
 @property (nonatomic, retain) UIWindow *window;
-@property (nonatomic, retain) UIScrollView *scrollView;
+@property (nonatomic, retain) LoggingScrollView *scrollView;
 
 @end
